@@ -167,6 +167,41 @@ def takeover_check_from_file(file_path):
         else:
             console.print(f"[green][Safe][/green] {domain}")
 
+async def check_live_from_file(file_path):
+    try:
+        with open(file_path, "r") as f:
+            subdomains = [line.strip() for line in f if line.strip()]
+    except FileNotFoundError:
+        console.print(f"[bold red]❌ File not found: {file_path}[/bold red]")
+        return
+
+    console.print(f"\n[cyan]📡 Checking live subdomains (HTTP/HTTPS) from [bold]{file_path}[/bold][/cyan]\n")
+    results = []
+    timeout = aiohttp.ClientTimeout(total=5)
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        for sub in subdomains:
+            live = False
+            for protocol in ["http", "https"]:
+                url = f"{protocol}://{sub}"
+                try:
+                    async with session.get(url, allow_redirects=True) as response:
+                        if response.status < 400:
+                            console.print(f"[bold green][Live][/bold green] {url} ✅")
+                            results.append(url)
+                            live = True
+                            break
+                except:
+                    continue
+            if not live:
+                console.print(f"[bold red][Dead][/bold red] {sub} ❌")
+
+    if results:
+        with open("live_subdomains.txt", "w") as out:
+            for live_url in results:
+                out.write(f"{live_url}\n")
+        console.print(f"\n[bold green]📄 Saved live subdomains to live_subdomains.txt[/bold green]\n")
+
 async def main():
     parser = argparse.ArgumentParser(description="SubLyze - Advanced Subdomain Recon Engine")
     parser.add_argument("-d", "--domain", help="Target domain")
@@ -269,4 +304,3 @@ if __name__ == "__main__":
         asyncio.run(main())
     except KeyboardInterrupt:
         console.print("\n[red]Interrupted by user.[/red]")
-
