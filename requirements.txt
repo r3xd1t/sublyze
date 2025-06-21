@@ -1,0 +1,6 @@
+aiohttp
+dnspython
+rich
+termcolor
+beautifulsoup4
+
